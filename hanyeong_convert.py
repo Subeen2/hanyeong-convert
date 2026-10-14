@@ -159,19 +159,28 @@ def on_hotkey():
     if selected:
         set_clipboard(convert(selected))
         press_ctrl("V")
-        time.sleep(0.2)  # 붙여넣기 끝나기 전에 클립보드 복원하면 원래 내용이 붙음
+        # ponytail: 고정 대기. 앱이 붙여넣기 전에 복원하면 원래 내용이 붙음. 느린 앱에서 그러면 늘릴 것
+        time.sleep(0.8)
         set_ime_korean(not has_hangul(selected))
     set_clipboard(saved)
 
 
+def alert(text):
+    user32.MessageBoxW(None, text, "hanyeong-convert", 0x10)  # pythonw는 콘솔이 없어 오류가 안 보임
+
+
 def main():
     if not user32.RegisterHotKey(None, 1, *HOTKEY):
-        sys.exit("단축키 등록 실패: 다른 프로그램이 Ctrl+Shift+Space를 쓰는 중")
+        alert("단축키 등록 실패: 이미 실행 중이거나 다른 프로그램이 Ctrl+Shift+Space를 쓰는 중")
+        sys.exit(1)
     print("대기 중: 글자 드래그 후 Ctrl+Shift+Space")
     msg = wintypes.MSG()
     while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
         if msg.message == 0x0312:  # WM_HOTKEY
-            on_hotkey()
+            try:
+                on_hotkey()
+            except Exception as e:  # 한 번 실패해도 상주는 유지
+                alert(f"변환 실패: {e!r}")
 
 
 if __name__ == "__main__":
